@@ -6,10 +6,11 @@ from os.path import dirname
 from os.path import join
 from os.path import split
 
-import numpy as np
 from setuptools import Extension
 from setuptools import find_packages
 from setuptools import setup
+
+import numpy as np
 
 try:
     from Cython.Build import cythonize
@@ -59,14 +60,14 @@ if platform.system() == "Windows":
     include_dirs += [join(conda_location, "Library", "include")]
     include_dirs += [join(conda_location, "include")]
     library_dirs += [join(conda_location, "Library", "lib")]
-    extra_compile_args += ["-DFFTW_DLL"]
+    extra_compile_args += ["-DFFTW_DLL", "/DUSE_OPENBLAS"]
 
 else:
     # unix system lib and include path
     conda_location = split(conda_location)[0]
     include_dirs += [join(conda_location, "include")]
     library_dirs += [join(conda_location, "lib")]
-    extra_compile_args = ["-O3", "-ffast-math"]
+    extra_compile_args = ["-O3", "-ffast-math", "-DUSE_OPENBLAS"]
 
 libraries += ["fftw3", "openblas"]
 extra_link_args += ["-lm"]
@@ -91,7 +92,7 @@ source = [
     "src/c_lib/lib/mrsimulator.c",
     "src/c_lib/lib/octahedron.c",
     "src/c_lib/lib/simulation.c",
-    "src/c_lib/lib/powder_setup.c",
+    "src/c_lib/lib/frequency_averaging.c",
     "src/c_lib/lib/schemes.c",
     "src/c_lib/lib/method.c",
 ]
@@ -144,7 +145,7 @@ ext_modules += [
 if USE_CYTHON:
     ext_modules = cythonize(ext_modules, language_level=3)
 
-extras = {"lmfit": ["lmfit>=1.0.0"]}
+extras = {"lmfit": ["lmfit>=1.0.2"]}
 
 description = "A python toolbox for simulating fast real-time solid-state NMR spectra."
 setup(

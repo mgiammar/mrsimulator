@@ -3,10 +3,11 @@ from libcpp cimport bool as bool_t
 from numpy cimport ndarray
 import numpy as np
 import cython
-from mrsimulator import sandbox as sb
 
 __author__ = "Deepansh J. Srivastava"
 __email__ = "srivastava.89@osu.edu"
+
+clib.generate_table()
 
 @cython.profile(False)
 @cython.boundscheck(False)
@@ -117,7 +118,7 @@ def one_d_spectrum(method,
     prev_n_sidebands = 0
     for i, dim in enumerate(method.spectral_dimensions):
         for event in dim.events:
-            freq_contrib = np.append(freq_contrib, event.get_value_int())
+            freq_contrib = np.append(freq_contrib, event._freq_contrib_flags())
             if event.rotor_frequency < 1.0e-3:
                 sample_rotation_frequency_in_Hz = 1.0e9
                 rotor_angle_in_rad = 0.0
@@ -176,7 +177,7 @@ def one_d_spectrum(method,
 # _____________________________________________________________________________
 
 # frequency contrib
-    cdef ndarray[bool_t] freq_contrib_c = np.asarray(freq_contrib, dtype=np.bool)
+    cdef ndarray[bool_t] freq_contrib_c = np.asarray(freq_contrib, dtype=bool)
 
 # affine transformation
     cdef ndarray[double] affine_matrix_c
