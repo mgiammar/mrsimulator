@@ -51,7 +51,7 @@ sigma = 1212275
 oxygen_experiment = oxygen_experiment.real
 
 # Convert the dimension coordinates from Hz to ppm.
-oxygen_experiment.dimensions[0].to("ppm", "nmr_frequency_ratio")
+oxygen_experiment.x[0].to("ppm", "nmr_frequency_ratio")
 
 # Normalize the spectrum
 max_amp = oxygen_experiment.max()
@@ -136,7 +136,7 @@ processor = sp.SignalProcessor(
         sp.IFFT(),
         apo.Gaussian(FWHM="100 Hz"),
         sp.FFT(),
-        sp.Scale(factor=20000.0),
+        sp.Scale(factor=1.0),
     ]
 )
 processed_data = processor.apply_operations(data=sim.methods[0].simulation).real
