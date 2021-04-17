@@ -1,20 +1,22 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-11B MAS NMR of Lithium orthoborate crystal
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+87Rb 2D 3QMAS NMR of RbNO3
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 """
 # %%
-# The following is a quadrupolar lineshape fitting example for the 11B MAS NMR of
-# lithium orthoborate crystal. The dataset was provided by Nathan Barrow.
+# The following is a 3QMAS fitting example for :math:`\text{RbNO}_3`. The dataset was
+# acquired and shared by Brendan Wilson.
+import numpy as np
 import csdmpy as cp
 import matplotlib.pyplot as plt
 from lmfit import Minimizer, report_fit
 
-from mrsimulator import Simulator, Site, SpinSystem
-from mrsimulator.methods import BlochDecayCTSpectrum
+from mrsimulator import Simulator
+from mrsimulator.methods import ThreeQ_VAS
 from mrsimulator import signal_processing as sp
 from mrsimulator.utils import get_spectral_dimensions
+from mrsimulator.utils.collection import single_site_system_generator
 from mrsimulator.utils.spectral_fitting import LMFIT_min_function, make_LMFIT_params
 
 # sphinx_gallery_thumbnail_number = 3
@@ -22,11 +24,11 @@ from mrsimulator.utils.spectral_fitting import LMFIT_min_function, make_LMFIT_pa
 # %%
 # Import the dataset
 # ------------------
-filename = "https://sandbox.zenodo.org/record/710705/files/11B_lithum_orthoborate.csdf"
+filename = "https://sandbox.zenodo.org/record/784924/files/RbNO3_MQMAS.csdf"
 experiment = cp.load(filename)
 
 # standard deviation of noise from the dataset
-sigma = 4.111404e9
+sigma = 2.119073
 
 # For spectral fitting, we only focus on the real part of the complex dataset
 experiment = experiment.real
@@ -36,14 +38,16 @@ _ = [item.to("ppm", "nmr_frequency_ratio") for item in experiment.dimensions]
 
 # Normalize the spectrum
 max_amp = experiment.max()
-experiment /= max_amp
-sigma /= max_amp
 
 # plot of the dataset.
+levels = (np.arange(14) + 1) * max_amp / 15  # contours are drawn at these levels.
+options = dict(levels=levels, alpha=0.75, linewidths=0.5)  # plot options
+
 plt.figure(figsize=(4.25, 3.0))
 ax = plt.subplot(projection="csdm")
-ax.plot(experiment, "k", alpha=0.5)
-ax.set_xlim(100, -100)
+ax.contour(experiment, colors="k", **options)
+ax.set_xlim(-20, -50)
+ax.set_ylim(-45, -65)
 plt.tight_layout()
 plt.show()
 
@@ -53,30 +57,36 @@ plt.show()
 # **Guess model**
 #
 # Create a guess list of spin systems.
-B11 = Site(
-    isotope="11B",
-    isotropic_chemical_shift=20.0,  # in ppm
-    quadrupolar={"Cq": 2.3e6, "eta": 0.03},  # Cq in Hz
+
+shifts = [-26.4, -28.5, -32]  # in ppm
+Cq = [1.65e6, 1.9e6, 1.7e6]  # in  Hz
+eta = [0.3, 0.8, 0.4]
+abundance = [33.33, 33.33, 33.33]  # in %
+
+spin_systems = single_site_system_generator(
+    isotopes="87Rb",
+    isotropic_chemical_shifts=shifts,
+    quadrupolar={"Cq": Cq, "eta": eta},
+    abundance=abundance,
 )
-spin_systems = [SpinSystem(sites=[B11])]
 
 
 # %%
 # **Method**
 
+# Create the 3QMAS method.
 # Get the spectral dimension paramters from the experiment.
 spectral_dims = get_spectral_dimensions(experiment)
 
-method = BlochDecayCTSpectrum(
-    channels=["11B"],
-    magnetic_flux_density=14.1,  # in T
-    rotor_frequency=12500,  # in Hz
+method = ThreeQ_VAS(
+    channels=["87Rb"],
+    magnetic_flux_density=9.4,  # in T
     spectral_dimensions=spectral_dims,
     experiment=experiment,  # add the measurement to the method.
 )
 
 # Optimize the script by pre-setting the transition pathways for each spin system from
-# the method.
+# the das method.
 for sys in spin_systems:
     sys.transition_pathways = method.get_transition_pathways(sys)
 
@@ -87,18 +97,19 @@ for sys in spin_systems:
 # ----------
 sim = Simulator()
 sim.spin_systems = spin_systems  # add the spin systems
-sim.methods = [method]  # add the method
+sim.methods = [method]  # add the method.
 sim.run()
 
 # Post Simulation Processing
 # --------------------------
 processor = sp.SignalProcessor(
     operations=[
-        # Lorentzian convolution along both dimensions.
-        sp.IFFT(),
-        sp.apodization.Exponential(FWHM="100 Hz"),
-        sp.FFT(),
-        sp.Scale(factor=1),
+        # Gaussian convolution along both dimensions.
+        sp.IFFT(dim_index=(0, 1)),
+        sp.apodization.Gaussian(FWHM="0.08 kHz", dim_index=0),
+        sp.apodization.Gaussian(FWHM="0.1 kHz", dim_index=1),
+        sp.FFT(dim_index=(0, 1)),
+        sp.Scale(factor=50),
     ]
 )
 processed_data = processor.apply_operations(data=sim.methods[0].simulation).real
@@ -107,11 +118,10 @@ processed_data = processor.apply_operations(data=sim.methods[0].simulation).real
 # --------------------------
 plt.figure(figsize=(4.25, 3.0))
 ax = plt.subplot(projection="csdm")
-ax.plot(experiment, "k", linewidth=1, label="Experiment")
-ax.plot(processed_data, "r", alpha=0.5, linewidth=2.5, label="guess spectrum")
-ax.set_xlim(100, -100)
-plt.grid()
-plt.legend()
+ax.contour(experiment, colors="k", **options)
+ax.contour(processed_data, colors="r", linestyles="--", **options)
+ax.set_xlim(-20, -50)
+ax.set_ylim(-45, -65)
 plt.tight_layout()
 plt.show()
 
@@ -122,7 +132,6 @@ plt.show()
 # Use the :func:`~mrsimulator.utils.spectral_fitting.make_LMFIT_params` for a quick
 # setup of the fitting parameters.
 params = make_LMFIT_params(sim, processor)
-params.pop("sys_0_abundance")
 print(params.pretty_print(columns=["value", "min", "max", "vary", "expr"]))
 
 # %%
@@ -140,10 +149,10 @@ processed_data = processor.apply_operations(data=sim.methods[0].simulation).real
 # Plot the spectrum
 plt.figure(figsize=(4.25, 3.0))
 ax = plt.subplot(projection="csdm")
-ax.plot(experiment, "k", linewidth=1, label="Experiment")
-ax.plot(processed_data, "r", alpha=0.5, linewidth=2.5, label="Best Fit")
-ax.set_xlim(100, -100)
+ax.contour(experiment, colors="k", **options)
+ax.contour(processed_data, colors="r", linestyles="--", **options)
+ax.set_xlim(-20, -50)
+ax.set_ylim(-45, -65)
 plt.grid()
-plt.legend()
 plt.tight_layout()
 plt.show()
