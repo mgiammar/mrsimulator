@@ -21,11 +21,6 @@ ENCODING_PAIRS = [
     ["].isotropic_j", "_isotropic_j"],
     ["].j_symmetric.", "_j_symmetric_"],
     ["].dipolar.", "_dipolar_"],
-    # post simulation
-    ["].post_simulation", "_POST_SIM_"],
-    [".scale", "scale"],
-    [".apodization[", "APODIZATION_"],
-    ["].args", "_args"],
 ]
 
 DECODING_PAIRS = [
@@ -52,7 +47,13 @@ EXCLUDE = [
     "transition_pathways",
 ]
 
-POST_SIM_DICT = {"Gaussian": "FWHM", "Exponential": "FWHM", "Scale": "factor"}
+POST_SIM_DICT = {
+    "Gaussian": {"FWHM": "FWHM"},
+    "Exponential": {"FWHM": "FWHM"},
+    "Scale": {"factor": "factor"},
+    "ConstantOffset": {"offset": "offset"},
+    "Linear": {"amplitude": "amplitude", "offset": "offset"},
+}
 
 
 def _str_encode(my_string):
@@ -144,8 +145,7 @@ def _traverse_dictionaries(dictionary, parent="spin_systems"):
 
 
 def _post_sim_LMFIT_params(params, post_sim, index):
-    """
-    Creates an LMFIT Parameters object for SignalProcessor operations
+    """Creates an LMFIT Parameters object for SignalProcessor operations
     involved in spectrum fitting.
 
     Args:
@@ -157,10 +157,10 @@ def _post_sim_LMFIT_params(params, post_sim, index):
     for i, operation in enumerate(post_sim.operations):
         name = operation.__class__.__name__
         if name in POST_SIM_DICT:
-            attr = POST_SIM_DICT[name]
-            key = f"SP_{index}_operation_{i}_{name}_{attr}"
-            val = operation.__getattribute__(attr)
-            params.add(name=key, value=val)
+            for attr in POST_SIM_DICT[name]:
+                key = f"SP_{index}_operation_{i}_{name}_{attr}"
+                val = operation.__getattribute__(attr)
+                params.add(name=key, value=val)
 
 
 def make_signal_processor_params(post_sim):
@@ -311,11 +311,12 @@ def _update_post_sim_from_LMFIT_params(params, post_sim):
             sp_idx = int(split_name[1])
             op_idx = int(split_name[3])  # The operation index
             function = split_name[4]
+            arg = split_name[5]
             val = params[param].value  # The value of operation argument parameter
 
             # update the post_sim object with the parameter updated value.
             post_sim[sp_idx].operations[op_idx].__setattr__(
-                POST_SIM_DICT[function], val
+                POST_SIM_DICT[function][arg], val
             )
 
 
@@ -337,35 +338,41 @@ def update_mrsim_obj_from_params(params, sim: Simulator, post_sim: list = None):
             _update_post_sim_from_LMFIT_params(params, post_sim)
 
 
+def get_correct_data_order(data):
+    """If data has negative increment, reverse the data."""
+    y = data.y[0].components[0]
+    index = [-i - 1 for i, x in enumerate(data.x) if x.increment.value < 0]
+    return y if index == [] else np.flip(y, axis=tuple(index))
+
+
 def LMFIT_min_function(
-    params: Parameters, sim: Simulator, post_sim: list = None, sigma: list = None
+    params: Parameters, sim: Simulator, processors: list = None, sigma: list = None
 ):
-    """
-    The simulation routine to calculate the vector difference between simulation and
+    """The simulation routine to calculate the vector difference between simulation and
     experiment based on the parameters update.
 
     Args:
         params: Parameters object containing parameters for OLS minimization.
         sim: Simulator object.
-        post_sim: A list of PostSimulator objects corresponding to the methods in the
+        processors: A list of PostSimulator objects corresponding to the methods in the
             Simulator object.
         sigma: A list of standard deviations corresponding to the experiments in the
             Simulator.methods attribute
     Returns:
         Array of the differences between the simulation and the experimental data.
     """
-    post_sim = post_sim if isinstance(post_sim, list) else [post_sim]
+    processors = processors if isinstance(processors, list) else [processors]
     if sigma is None:
         sigma = [1.0 for _ in sim.methods]
     sigma = sigma if isinstance(sigma, list) else [sigma]
 
-    update_mrsim_obj_from_params(params, sim, post_sim)
+    update_mrsim_obj_from_params(params, sim, processors)
 
     sim.run()
 
     processed_data = [
         item.apply_operations(data=data.simulation)
-        for item, data in zip(post_sim, sim.methods)
+        for item, data in zip(processors, sim.methods)
     ]
 
     diff = np.asarray([])
@@ -374,12 +381,39 @@ def LMFIT_min_function(
         for decomposed_datum in processed_datum.y:
             datum += decomposed_datum.components[0].real
 
-        # If data has negative increment, reverse the data before taking the difference.
-        exp_data = mth.experiment.y[0].components[0]
-        index = [
-            -i - 1 for i, x in enumerate(mth.experiment.x) if x.increment.value < 0
-        ]
-        exp_data = exp_data if index == [] else np.flip(exp_data, axis=tuple(index))
+        exp_data = get_correct_data_order(mth.experiment)
         diff = np.append(diff, (exp_data - datum) / sigma_)
-
     return diff
+
+
+def bestfit(sim: Simulator, processors: list = None):
+    """Return a list of best fit spectrum."""
+    processors = processors if isinstance(processors, list) else [processors]
+    sim.run()
+
+    fits = [
+        add_csdm_dvs(proc.apply_operations(data=mth.simulation).real)
+        for mth, proc in zip(sim.methods, processors)
+    ]
+
+    return fits
+
+
+def add_csdm_dvs(data):
+    new_data = data.split()
+    new_csdm = 0
+    for item in new_data:
+        new_csdm += item
+    return new_csdm if new_data != [] else None
+
+
+def residuals(sim: Simulator, processors: list = None):
+    """Return a list of best fit spectrum."""
+    residual_ = bestfit(sim, processors)
+
+    for res, mth in zip(residual_, sim.methods):
+        exp_data = get_correct_data_order(mth.experiment)
+        res.y[0].components[0] -= exp_data
+        res.y[0].components[0] *= -1
+
+    return residual_
