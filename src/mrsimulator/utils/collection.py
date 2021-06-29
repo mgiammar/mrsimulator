@@ -301,7 +301,6 @@ def _check_lengths(attributes):
     )
 
 
-# BUG: doctest fails on example code
 def _zip_dict(_dict):
     """Makes list of dicts with the same keys and scalar values from dict of lists.
     Single dictionaries of only None will return None.

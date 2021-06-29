@@ -49,7 +49,7 @@ from lmfit import Parameters
 def save(
     filename: str,
     simulator: Simulator,
-    signal_processors: list = None,
+    signal_processors: list = None,  # NOTE: Cana SignalProcessor object be passed instead of list?
     params: Parameters = None,
     with_units: bool = True,
 ):

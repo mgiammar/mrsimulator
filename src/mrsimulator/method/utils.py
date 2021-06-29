@@ -52,6 +52,41 @@ def get_iso_dict(channels, isotopes):
     return {item: (np.where(isotopes == item))[0] for item in intersection}
 
 
+# TODO Add functionality for arbitrary number of euler rotations
+def add_euler_rotations(alpha1, beta1, gamma1, alpha2, beta2, gamma2):
+    """Adds two rotations each described by a set of Euler angles
+
+    Args:
+        alpha1 (float):
+        beta1 (float):
+        gamma1 (float):
+        aplha2 (float):
+        beta2 (float):
+        gamma2 (float):
+
+    Returns:
+        alpha:
+        beta (float):
+        gamma (float):
+    """
+    # Calculate beta (eq 66 line 2 in addRotations.pdf)
+    beta = np.cos(beta1) * np.cos(beta2)  # RHS term 1
+    beta -= np.sin(beta1) * np.sin(beta2) * np.cos(alpha1 + gamma2)  # RHS term 2
+    beta = np.arccos(beta)
+
+    temp = np.sin(alpha1 + gamma1) / np.sin(beta)
+
+    # Calculate alpha (eq 67 in addRotations.pdf)
+    alpha = temp * np.sin(beta1)
+    alpha = np.arcsin(alpha) + alpha2
+
+    # Calculate gamma (eq 67 in addRotations.pdf)
+    gamma = temp * np.sin(beta2)
+    gamma = np.arcsin(gamma) + gamma1
+
+    return alpha, beta, gamma
+
+
 # Deprecated
 # def query_permutations(query, isotope, channel, transition_symmetry="P"):
 #     """

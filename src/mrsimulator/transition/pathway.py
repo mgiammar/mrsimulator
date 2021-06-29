@@ -110,6 +110,8 @@ class TransitionPathway(TransitionList):
     def __repr__(self):
         return " ⟶ ".join([repr(item) for item in self._list])
 
+    # BUG: On `mrsimulator.save()` (v0.6) error of
+    # TypeError: Object of type TransitionPathway is not JSON serializable
     def json(self, **kwargs) -> dict:
         """Parse the class object to a JSON compliant python dictionary object.
 
