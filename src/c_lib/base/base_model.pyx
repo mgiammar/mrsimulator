@@ -4,8 +4,8 @@ from numpy cimport ndarray
 import numpy as np
 import cython
 
-__author__ = "Deepansh J. Srivastava"
-__email__ = "srivastava.89@osu.edu"
+__author__ = ["Deepansh J. Srivastava", "Matthew D. Giammar"]
+__email__ = ["srivastava.89@osu.edu", "giammar.7@buckeyemail.osu.edu"]
 
 clib.generate_table()
 
@@ -551,3 +551,125 @@ def transition_connect_factor(float l, float m1_f, float m1_i, float m2_f,
 #     cdef ndarray[double] factor = np.zeros(2, dtype=np.float64)
 #     clib.transition_connect_factor(l, m1_a, m2_a, m1_b, m2_b, theta, phi, &factor[0])
 #     return complex(factor[0], factor[1])
+
+
+@cython.profile(False)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def populate_spin_systems(
+    list spin_systems,
+    ndarray sites,
+    ndarray abundance,
+):
+    cdef number_of_systems = len(spin_systems)
+
+    for i in range(number_of_systems):
+        sys = spin_systems[i]
+        sys.sites = [sites[i]]
+        sys.abundance = abundance[i]
+
+    return spin_systems
+
+
+@cython.profile(False)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def populate_sites(
+    list sites,
+    ndarray isotope,
+    ndarray isotropic_chemical_shift,
+    ndarray name,
+    ndarray label,
+    ndarray description,
+    ndarray shielding_symmetric_zeta,
+    ndarray shielding_symmetric_eta,
+    ndarray shielding_symmetric_alpha,
+    ndarray shielding_symmetric_beta,
+    ndarray shielding_symmetric_gamma,
+    ndarray shielding_antisymmetric_zeta,
+    ndarray shielding_antisymmetric_alpha,
+    ndarray shielding_antisymmetric_beta,
+    ndarray quadrupolar_Cq,
+    ndarray quadrupolar_eta,
+    ndarray quadrupolar_alpha,
+    ndarray quadrupolar_gamma,
+):
+    cdef int number_of_sites = len(sites)
+
+    for i in range(number_of_sites):
+        site = sites[i]
+        site.isotope = isotope[i]
+        site.isotropic_chemical_shift = isotropic_chemical_shift[i]
+        site.name = name[i]
+        site.label = label[i]
+        site.description = description[i]
+
+        # if shielding_symmetric_zeta[i] is not None:
+        #     shielding_symmetric.zeta = shielding_symmetric_zeta[i]
+        # if shielding_symmetric_eta[i] is not None:
+        #     shielding_symmetric.eta = shielding_symmetric_eta[i]
+        # if shielding_symmetric_alpha[i] is not None:
+        #     shielding_symmetric.alpha = shielding_symmetric_alpha[i]
+        # if shielding_symmetric_beta[i] is not None:
+        #     shielding_symmetric.beta = shielding_symmetric_beta[i]
+        # if shielding_symmetric_gamma[i] is not None:
+        #     shielding_symmetric.gamma = shielding_symmetric_gamma[i]
+
+        if np.any(np.array([
+            shielding_symmetric_zeta[i],
+            shielding_symmetric_eta[i],
+            shielding_symmetric_alpha[i],
+            shielding_symmetric_beta[i],
+            shielding_symmetric_gamma[i],
+        ]) != None):
+            site.shielding_symmetric = {
+                "zeta": shielding_symmetric_zeta[i],
+                "eta": shielding_symmetric_eta[i],
+                "alpha": shielding_symmetric_alpha[i],
+                "beta": shielding_symmetric_beta[i],
+                "gamma": shielding_symmetric_gamma[i],
+            }
+
+        # shielding_antisymmetric = site.shielding_antisymmetric
+        # if shielding_antisymmetric_zeta[i] is not None:
+        #     shielding_antisymmetric.zeta = shielding_antisymmetric_zeta[i]
+        # if shielding_antisymmetric_alpha[i] is not None:
+        #     shielding_antisymmetric.alpha = shielding_antisymmetric_alpha[i]
+        # if shielding_antisymmetric_beta[i] is not None:
+        #     shielding_antisymmetric.beta = shielding_antisymmetric_beta[i]
+
+        if np.any(np.array([
+            shielding_antisymmetric_zeta[i],
+            shielding_antisymmetric_alpha[i],
+            shielding_antisymmetric_beta[i],
+        ]) != None):
+            site.shielding_antisymmetric = {
+                "zeta": shielding_antisymmetric_zeta[i],
+                "alpha": shielding_antisymmetric_alpha[i],
+                "beta": shielding_antisymmetric_beta[i],
+            }
+
+        # quadrupolar = site.quadrupolar
+        # if quadrupolar_Cq[i] is not None:
+        #     quadrupolar.Cq = quadrupolar_Cq[i]
+        # if quadrupolar_eta[i] is not None:
+        #     quadrupolar.eta = quadrupolar_eta[i]
+        # if quadrupolar_alpha[i] is not None:
+        #     quadrupolar.alpha = quadrupolar_alpha[i]
+        # if quadrupolar_gamma[i] is not None:
+        #     quadrupolar.gamma = quadrupolar_gamma[i]
+
+        if np.any(np.array([
+            quadrupolar_Cq[i],
+            quadrupolar_eta[i],
+            quadrupolar_alpha[i],
+            quadrupolar_gamma[i],
+        ]) != None):
+            site.quadrupolar = {
+                "Cq": quadrupolar_Cq[i],
+                "eta": quadrupolar_eta[i],
+                "alpha": quadrupolar_alpha[i],
+                "gamma": quadrupolar_gamma[i],
+            }
+
+    return sites

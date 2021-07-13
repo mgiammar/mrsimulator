@@ -2,38 +2,39 @@
 import numpy as np
 import pytest
 from mrsimulator.utils.collection import _check_lengths
-from mrsimulator.utils.collection import _extend_dict_values
 from mrsimulator.utils.collection import _extend_to_nparray
 from mrsimulator.utils.collection import _fix_item
-from mrsimulator.utils.collection import _zip_dict
 from mrsimulator.utils.collection import single_site_system_generator
+
+# from mrsimulator.utils.collection import _extend_dict_values
+# from mrsimulator.utils.collection import _zip_dict
 
 
 __author__ = ["Deepansh Srivastava", "Matthew D. Giammar"]
 __email__ = ["srivastava.89@osu.edu", "giammar.7@buckeyemail.osu.edu"]
 
 
-def numpy_dict_equality(d1, d2):
-    if set(d1.keys()) != set(d2.keys()):
-        return False
-    for key1, val1 in d1.items():
-        val2 = d2[key1]
-        if not np.all(val1 == val2):
-            return False
-    return True
+# def numpy_dict_equality(d1, d2):
+#     if set(d1.keys()) != set(d2.keys()):
+#         return False
+#     for key1, val1 in d1.items():
+#         val2 = d2[key1]
+#         if not np.all(val1 == val2):
+#             return False
+#     return True
 
 
-def test_numpy_dict_equality():
-    d1 = {"a": np.arange(10), "b": np.ones(10)}
-    d2 = {"a": np.arange(10), "b": np.ones(10)}
+# def test_numpy_dict_equality():
+#     d1 = {"a": np.arange(10), "b": np.ones(10)}
+#     d2 = {"a": np.arange(10), "b": np.ones(10)}
 
-    assert numpy_dict_equality(d1, d2)
+#     assert numpy_dict_equality(d1, d2)
 
-    d1 = {"a": np.arange(10), "b": np.zeros(10)}
-    assert numpy_dict_equality(d1, d2) is False
+#     d1 = {"a": np.arange(10), "b": np.zeros(10)}
+#     assert numpy_dict_equality(d1, d2) is False
 
-    d1 = {"a": "fail"}
-    assert numpy_dict_equality(d1, d2) is False
+#     d1 = {"a": "fail"}
+#     assert numpy_dict_equality(d1, d2) is False
 
 
 # def test_get_default_lists():
@@ -84,34 +85,37 @@ def test_fix_item():
     assert np.array_equal(_fix_item(item), check)
 
 
-def test_zip_dict():
-    dictionary = {
-        "key1": [0, 1, 2, 3, 4],
-        "key2": [5, 6, 7, 8, 9],
-        "key3": [10, 11, 12, 13, 14],
-        "key4": [15, 16, 17, 18, 19],
-    }
-    zipped = _zip_dict(dictionary)
-    for i, row in enumerate(zipped):
-        assert row == {"key1": i, "key2": 5 + i, "key3": 10 + i, "key4": 15 + i}
+# TODO: def test_add_dict_to_attr():
 
-    dictionary["key2"] = [None] * 5
-    zipped = _zip_dict(dictionary)
-    for i, row in enumerate(zipped):
-        assert row == {"key1": i, "key2": None, "key3": 10 + i, "key4": 15 + i}
 
-    dictionary = {
-        "key1": [0, None, 2, 3, 4],
-        "key2": [5, None, 7, 8, 9],
-        "key3": [10, None, 12, 13, 14],
-        "key4": [15, None, 17, 18, 19],
-    }
-    zipped = _zip_dict(dictionary)
-    for i, row in enumerate(zipped):
-        if i == 1:
-            assert row is None
-        else:
-            assert row == {"key1": i, "key2": 5 + i, "key3": 10 + i, "key4": 15 + i}
+# def test_zip_dict():
+#     dictionary = {
+#         "key1": [0, 1, 2, 3, 4],
+#         "key2": [5, 6, 7, 8, 9],
+#         "key3": [10, 11, 12, 13, 14],
+#         "key4": [15, 16, 17, 18, 19],
+#     }
+#     zipped = _zip_dict(dictionary)
+#     for i, row in enumerate(zipped):
+#         assert row == {"key1": i, "key2": 5 + i, "key3": 10 + i, "key4": 15 + i}
+
+#     dictionary["key2"] = [None] * 5
+#     zipped = _zip_dict(dictionary)
+#     for i, row in enumerate(zipped):
+#         assert row == {"key1": i, "key2": None, "key3": 10 + i, "key4": 15 + i}
+
+#     dictionary = {
+#         "key1": [0, None, 2, 3, 4],
+#         "key2": [5, None, 7, 8, 9],
+#         "key3": [10, None, 12, 13, 14],
+#         "key4": [15, None, 17, 18, 19],
+#     }
+#     zipped = _zip_dict(dictionary)
+#     for i, row in enumerate(zipped):
+#         if i == 1:
+#             assert row is None
+#         else:
+#             assert row == {"key1": i, "key2": 5 + i, "key3": 10 + i, "key4": 15 + i}
 
 
 def test_extend_to_nparray():
@@ -139,35 +143,35 @@ def test_extend_to_nparray():
     assert extended_none.size == 15
 
 
-def test_extend_dict_values():
-    _dict = {"key1": 1, "key2": 2, "key3": 3}
+# def test_extend_dict_values():
+#     _dict = {"key1": 1, "key2": 2, "key3": 3}
 
-    # Single length dict remains unchanged with n_sites of 1
-    assert numpy_dict_equality(_extend_dict_values(_dict, 1)[0], _dict)
-    assert numpy_dict_equality(_extend_dict_values(_dict, 5)[0], _dict)
+#     # Single length dict remains unchanged with n_sites of 1
+#     assert numpy_dict_equality(_extend_dict_values(_dict, 1)[0], _dict)
+#     assert numpy_dict_equality(_extend_dict_values(_dict, 5)[0], _dict)
 
-    _dict = {"key1": [1], "key2": [2], "key3": [3]}
-    check_dict = {"key1": 1, "key2": 2, "key3": 3}
+#     _dict = {"key1": [1], "key2": [2], "key3": [3]}
+#     check_dict = {"key1": 1, "key2": 2, "key3": 3}
 
-    # Single length dict remains unchanged with n_sites of 1
-    assert numpy_dict_equality(_extend_dict_values(_dict, 1)[0], check_dict)
-    assert numpy_dict_equality(_extend_dict_values(_dict, 5)[0], check_dict)
+#     # Single length dict remains unchanged with n_sites of 1
+#     assert numpy_dict_equality(_extend_dict_values(_dict, 1)[0], check_dict)
+#     assert numpy_dict_equality(_extend_dict_values(_dict, 5)[0], check_dict)
 
-    _dict = {"key1": [1] * 5, "key2": 2, "key3": 3}
-    check_list = [{"key1": 1, "key2": 2, "key3": 3}] * 5
+#     _dict = {"key1": [1] * 5, "key2": 2, "key3": 3}
+#     check_list = [{"key1": 1, "key2": 2, "key3": 3}] * 5
 
-    assert _extend_dict_values(_dict, 1) == (check_list, 5)
-    assert _extend_dict_values(_dict, 5) == (check_list, 5)
+#     assert _extend_dict_values(_dict, 1) == (check_list, 5)
+#     assert _extend_dict_values(_dict, 5) == (check_list, 5)
 
-    error = ".*A list in a dictionary was misshapen.*"
-    with pytest.raises(ValueError, match=error):
-        _extend_dict_values(_dict, 4)
+#     error = ".*A list in a dictionary was misshapen.*"
+#     with pytest.raises(ValueError, match=error):
+#         _extend_dict_values(_dict, 4)
 
-    _dict = {"key1": [1] * 5, "key2": [2] * 4, "key3": 3}
+#     _dict = {"key1": [1] * 5, "key2": [2] * 4, "key3": 3}
 
-    error = ".*An array or list was either too short or too long.*"
-    with pytest.raises(ValueError, match=error):
-        _extend_dict_values(_dict, 1)
+#     error = ".*An array or list was either too short or too long.*"
+#     with pytest.raises(ValueError, match=error):
+#         _extend_dict_values(_dict, 1)
 
 
 def test_check_lengths():

@@ -6,6 +6,8 @@ from typing import Union
 import numpy as np
 from mrsimulator import Site
 from mrsimulator import SpinSystem
+from mrsimulator.base_model import populate_sites
+from mrsimulator.base_model import populate_spin_systems
 
 __author__ = ["Deepansh Srivastava", "Matthew D. Giammar"]
 __email__ = ["srivastava.89@osu.edu", "giammar.7@buckeyemail.osu.edu"]
@@ -123,26 +125,34 @@ def single_site_system_generator(
     )
     n_sites = len(sites)
 
+    # Compute abundances
     abundance = 1 / n_sites if abundance is None else abundance
     abundance = _extend_to_nparray(_fix_item(abundance), n_sites)
     n_abd = abundance.size
 
+    # Extend sites based on abundance if number of sites is 1
     if n_sites == 1:
         sites = np.asarray([sites[0] for _ in range(n_abd)])
         n_sites = sites.size
 
+    # List mismatch for sites and abundances
     if n_sites != n_abd:
         raise ValueError(
             "Number of sites does not match the number of abundances. "
             f"{LIST_LEN_ERROR_MSG}"
         )
 
+    # Calculate kept sites based on abundance tolerance
     keep_idxs = np.where(abundance > rtol * abundance.max())[0]
+    sites = np.asarray(sites)[keep_idxs]
+    abundance = abundance[keep_idxs]
+    n_sys = keep_idxs.size
 
-    return [
-        SpinSystem(sites=[site], abundance=abd)
-        for site, abd in zip(sites[keep_idxs], abundance[keep_idxs])
-    ]
+    return populate_spin_systems(
+        spin_systems=[SpinSystem() for _ in range(n_sys)],
+        sites=sites,
+        abundance=abundance,
+    )
 
 
 def site_generator(
@@ -220,37 +230,42 @@ def site_generator(
         >>> print(len(sys3))
         12
     """
-    lst = [isotope, isotropic_chemical_shift, name, label, description]
-    attributes = [_fix_item(item) for item in lst]
+    attr_kw = {
+        "isotope": _fix_item(isotope),
+        "isotropic_chemical_shift": _fix_item(isotropic_chemical_shift),
+        "name": _fix_item(name),
+        "label": _fix_item(label),
+        "description": _fix_item(description),
+    }
 
-    n_sites = _check_lengths(attributes)
+    # Add dict vals to attr_kw with key 'prefix_' + 'key'
+    _add_dict_to_attr(
+        attr_kw=attr_kw,
+        _dict=shielding_symmetric,
+        prefix="shielding_symmetric",
+        keys=["zeta", "eta", "alpha", "beta", "gamma"],
+    )
+    _add_dict_to_attr(
+        attr_kw=attr_kw,
+        _dict=shielding_antisymmetric,
+        prefix="shielding_antisymmetric",
+        keys=["zeta", "alpha", "beta"],
+    )
+    _add_dict_to_attr(
+        attr_kw=attr_kw,
+        _dict=quadrupolar,
+        prefix="quadrupolar",
+        keys=["Cq", "eta", "alpha", "gamma"],
+    )
 
-    lst_extend = [shielding_symmetric, shielding_antisymmetric, quadrupolar]
-    for obj in lst_extend:
-        if obj is not None:
-            obj_ext, n_dict = _extend_dict_values(obj, n_sites)
-            n_sites = max(n_sites, n_dict)
-            attributes.append(obj_ext)
-        else:
-            attributes.append(None)
+    # Find number of sites and extend non-array values to np.array of length n_sites
+    n_sites = _check_lengths(attr_kw.values())
+    attr_kw = {key: _extend_to_nparray(val, n_sites) for key, val in attr_kw.items()}
 
-    # Attributes order is same as below in list comprehension
-    attributes = [_extend_to_nparray(attr, n_sites) for attr in attributes]
-
-    return np.asarray(
-        [
-            Site(
-                isotope=iso,
-                isotropic_chemical_shift=shift,
-                name=name,
-                label=label,
-                description=desc,
-                shielding_symmetric=symm,
-                shielding_antisymmetric=antisymm,
-                quadrupolar=quad,
-            )
-            for iso, shift, name, label, desc, symm, antisymm, quad in zip(*attributes)
-        ]
+    # NOTE: Thinking about using zip() and pass alternate array to c function
+    return populate_sites(
+        sites=[Site() for _ in range(n_sites)],
+        **attr_kw,
     )
 
 
@@ -267,22 +282,14 @@ def _extend_to_nparray(item, n):
     return np.asarray(data)
 
 
-def _extend_dict_values(_dict, n_sites):
-    """Checks and extends dict values. Returns dict or list of dicts and max length."""
-    _dict = {key: _fix_item(val) for key, val in _dict.items()}
-    n_sites_dict = _check_lengths(list(_dict.values()))
-    if n_sites != 1 and n_sites_dict != 1 and n_sites != n_sites_dict:
-        raise ValueError(f"A list in a dictionary was misshapen. {LIST_LEN_ERROR_MSG}")
-
-    if n_sites_dict == 1:
-        _dict = {
-            key: val[0] if isinstance(val, (list, np.ndarray)) else val
-            for key, val in _dict.items()
-        }
-        return _dict, 1
-
-    _dict = {key: _extend_to_nparray(val, n_sites_dict) for key, val in _dict.items()}
-    return _zip_dict(_dict), n_sites_dict
+def _add_dict_to_attr(attr_kw, _dict, prefix, keys):
+    """Ensures all keys are present in _dict, if not adds 'key': None. Then adds
+    keys into attr_kw"""
+    if _dict is None:
+        _dict = {key: None for key in keys}
+    else:
+        _dict = {key: (_fix_item(_dict[key]) if key in _dict else None) for key in keys}
+    attr_kw.update([(f"{prefix}_{key}", _dict[key]) for key in keys])
 
 
 def _check_lengths(attributes):
@@ -299,21 +306,3 @@ def _check_lengths(attributes):
     raise ValueError(
         f"An array or list was either too short or too long. {LIST_LEN_ERROR_MSG}"
     )
-
-
-# BUG: doctest fails on example code
-def _zip_dict(_dict):
-    """Makes list of dicts with the same keys and scalar values from dict of lists.
-    Single dictionaries of only None will return None.
-
-    Example:
-    >>> foo = {'k1': [1, None, 3, 4], 'k2': [5, None, 7, 8], 'k3': [9, None, 11, 12]}
-    >>> pprint(_zip_dict(foo))
-    [{'k1': 1, 'k2': 5, 'k3': 9},
-     None,
-     {'k1': 3, 'k2': 7, 'k3': 11},
-     {'k1': 4, 'k2': 8, 'k3': 12}]
-    """
-    lst = [dict(zip(_dict.keys(), v)) for v in zip(*(_dict[k] for k in _dict.keys()))]
-    lst = [None if np.all([item is None for item in d.values()]) else d for d in lst]
-    return lst
