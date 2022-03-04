@@ -20,8 +20,6 @@ of the `mrsimulator` library is written in C, wrapped, and made available in pyt
 
 ---
 
-:warning: The package is currently under development. We advise using with caution. Bug reports are greatly appreciated.
-
 ## Why use mrsimulator?
 
 - It is open-source and free.
@@ -45,20 +43,20 @@ The `mrsimulator` package currently offers the following
 
 - Simulation of **coupled and uncoupled spin system**
 
-  - for spin I=1/2, and quadrupole I>1/2 nuclei,
-  - at arbitrary macroscopic magnetic flux density,
-  - at arbitrary rotor angles, and
-  - at arbitrary spinning frequency.
+  - for spin I=1/2, and quadrupole I>1/2 nuclei
+  - at arbitrary macroscopic magnetic flux density
+  - at arbitrary rotor angles
+  - at arbitrary spinning frequency
 
 - A library of **NMR methods**,
 
-  - 1D Bloch decay spectrum,
-  - 1D Bloch decay central transition spectrum,
-  - 2D Multi-Quantum Variable Angle Spinning (MQ-VAS),
-  - 2D Satellite-transition Variable Angle Spinning (MQ-VAS),
-  - 2D Dynamic Angle Spinning (DAS),
-  - 2D isotropic/anisotropic sideband correlation spectrum (e.g. PASS and MAT), and
-  - 2D Magic Angle Flipping (MAF).
+  - 1D Bloch decay spectrum
+  - 1D Bloch decay central transition spectrum
+  - 2D Multi-Quantum Variable Angle Spinning (MQ-VAS)
+  - 2D Satellite-transition Variable Angle Spinning (MQ-VAS)
+  - 2D Dynamic Angle Spinning (DAS)
+  - 2D isotropic/anisotropic sideband correlation spectrum (e.g. PASS and MAT)
+  - 2D Magic Angle Flipping (MAF)
 
 - **Models** for tensor parameter distribution in amorphous materials.
 
@@ -88,9 +86,9 @@ This should produce the following figure.
 
 ## Reporting Bugs
 
-The preferred location for submitting feature requests and bug reports is the [Github issue tracker](https://github.com/deepanshs/mrsimulator/issues). Reports are also welcomed by directly contacting [Deepansh Srivastava](mailto:srivastava.89@osu.edu).
+Submit bug reports or feature requests on the [Github issue tracker](https://github.com/deepanshs/mrsimulator/issues).
 
-Discussions are welcome on [Github discussion](https://github.com/deepanshs/mrsimulator/discussions)
+Discussions are welcome on the [Github discussion](https://github.com/deepanshs/mrsimulator/discussions) page.
 
 ## How to cite
 

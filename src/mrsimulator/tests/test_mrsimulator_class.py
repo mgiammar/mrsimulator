@@ -55,6 +55,8 @@ def setup_mrsimulator_obj():
 
 def test_json():
     mrsim = setup_mrsimulator_obj()
+    mrsim.simulator.methods[0].simulation = None
+    mrsim.simulator.methods[1].simulation = None
 
     py_dict = {
         "simulator": mrsim.simulator.json(),
@@ -68,6 +70,8 @@ def test_json():
 
 def test_parse():
     mrsim = setup_mrsimulator_obj()
+    mrsim.simulator.methods[0].simulation = None
+    mrsim.simulator.methods[1].simulation = None
     py_dict = mrsim.json()
     mrsim.simulator.name = "a test Simulator object"
     py_dict["simulator"]["name"] = "a test Simulator object"
