@@ -159,6 +159,18 @@ cdef extern from "simulation.h":
         )
 
 cdef extern from "interpolation.h":
+    void two_dim_linear_interpolation(
+        double *points,
+        int *nearest_points,
+        double *offset_vectors,
+        double *amp,
+        double *temp_amp,
+        int *dim_lengths,
+        int n_points
+    )
+
+
+cdef extern from "interpolation.h":
     void multidimensional_linear_interpolation(
         double *points,
         int *nearest_points,

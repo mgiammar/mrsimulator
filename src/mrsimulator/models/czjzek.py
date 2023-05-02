@@ -1,6 +1,7 @@
 import numpy as np
 from mrsimulator.spin_system.tensors import SymmetricTensor
 from mrsimulator.base_model import bin_with_linear_interp
+from mrsimulator.base_model import bin_with_linear_interp_2d
 
 from .utils import get_Haeberlen_components
 from .utils import get_principal_components
@@ -100,7 +101,7 @@ class AbstractDistribution:
             x_dim = pos[0].astype(np.float64, copy=True)
             y_dim = pos[1].astype(np.float64, copy=True)
             dims = [x_dim, y_dim]
-            hist = bin_with_linear_interp(np.array([zeta, eta]), dims)
+            hist = bin_with_linear_interp_2d(np.asarray([zeta, eta]), dims)
 
         if interpolation == "none":
             delta_z = (pos[0][1] - pos[0][0]) / 2

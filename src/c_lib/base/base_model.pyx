@@ -646,6 +646,60 @@ def bin_with_linear_interp(
     return amp.reshape([dim.size for dim in _grid_dims])
 
 
+@cython.profile(False)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def bin_with_linear_interp_2d(
+    ndarray[cnp.float64_t, ndim=2] points,
+    _grid_dims,  # list since 2d ndarrays can't have differnt shapes
+    # amp_out,
+):
+    """TODO: Docstring
+
+    Arguments:
+        (np.ndarray) points: random points
+        (list) grid_dims: Numpy array of each dimension on the grid
+        # (np.ndarray) amp_out: Numpy array to add binned pdf to
+
+    Return: A distribution of points binned with linear interpolation.
+    """
+    _points = points.copy()
+    for i in range(len(_grid_dims)):
+        dim = _grid_dims[i]
+        start = dim[0]
+        step = dim[1] - start
+        _points[i] = (_points[i] - start) / step
+
+    _points = np.vstack(_points).T
+    nearest = np.floor(_points + 0.5).astype(np.int32)
+    distance = _points - nearest
+
+    cdef ndarray[cnp.float64_t, ndim=1] points_C = _points.flatten()
+    cdef ndarray[cnp.float64_t, ndim=1] nearest_distance_C = distance.flatten()
+    cdef ndarray[int, ndim=1] nearest_points_C = nearest.astype(np.int32).flatten()
+
+    cdef ndarray[int, ndim=1] dim_sizes = np.asarray(
+        [dim.size for dim in _grid_dims], dtype=np.int32
+    )
+    cdef ndarray[cnp.float64_t, ndim=1] amp_C = np.zeros(np.prod(dim_sizes), dtype=np.float64).flatten()
+    cdef ndarray[cnp.float64_t, ndim=1] temp_amp_C = np.zeros(np.prod(dim_sizes), dtype=np.float64)
+
+    cdef int n_points = points_C.size / 2
+
+    clib.two_dim_linear_interpolation(
+        &points_C[0],
+        &nearest_points_C[0],
+        &nearest_distance_C[0],
+        &amp_C[0],
+        &temp_amp_C[0],
+        &dim_sizes[0],
+        n_points,
+    )
+
+    # return np.flip(amp_C.reshape([dim.size for dim in _grid_dims]), axis=0)
+    return amp_C.reshape([dim.size for dim in _grid_dims])
+
+
 # @cython.profile(False)
 # @cython.boundscheck(False)
 # @cython.wraparound(False)

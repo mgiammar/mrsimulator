@@ -153,6 +153,56 @@ static inline void fill_double(double *arr, double val, int count) {
   }
 }
 
+
+void two_dim_linear_interpolation(double *points, int *nearest_points,
+                                  double *offsets, double *amp, double *temp_amp,
+                                  int *dim_sizes, int n_points) {
+
+  int i, j, k, center_bin, dim_0_bin, dim_1_bin, dim_01_bin;
+  double delta0, delta1;
+  
+  // Loop over all points
+  for (i = 0; i < n_points * 2; i += 2) {
+
+    // Ensure point is within bounds of the grid, otherwise skip
+    if (points[i] < -0.5 || points[i + 1] < -0.5 || 
+        points[i] - (double)dim_sizes[0] > 0.5 || 
+        points[i + 1] - (double)dim_sizes[1] > 0.5) {
+      continue;
+    }
+
+    // Set up values for temporary variables for a single point
+    // center_bin = dot_prod_int(dim_strides, nearest_points + i, 2);
+    center_bin = nearest_points[i] * dim_sizes[0] + nearest_points[i + 1];
+
+    // Calculate bin indicies
+    delta0 = offsets[i];
+    delta1 = offsets[i + 1];
+
+    if (delta0 < 0.0) {
+      dim_0_bin = center_bin - dim_sizes[0];
+      delta0 = -delta0;
+    } else {
+      dim_0_bin = center_bin + dim_sizes[0];
+    }
+    if (delta1 < 0.0) {
+      dim_1_bin = center_bin - 1;
+      dim_01_bin = dim_0_bin - 1;
+      delta1 = -delta1;
+    } else {
+      dim_1_bin = center_bin + 1;
+      dim_01_bin = dim_0_bin + 1;
+    }
+
+    // Set bin amplitude values for each bin
+    amp[center_bin] += (1 - delta0) * (1 - delta1);
+    amp[dim_0_bin]  += delta0 * (1 - delta1);
+    amp[dim_1_bin]  += delta1 * (1 - delta0);
+    amp[dim_01_bin] += delta0 * delta1;
+  }
+}
+
+
 /**
  * @brief Bin random points onto a n-dimensional grid while performing linear
  * interpolation.
